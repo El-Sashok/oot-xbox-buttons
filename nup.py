@@ -1,7 +1,7 @@
 """Reads files out of a NUP container and handles the game's dictionary-compressed .zs files."""
 import struct
-import subprocess
-import tempfile
+
+import zstandard
 
 SUPERBLOCK_SIZE = 0x80
 TOC_HEADER_SIZE = 0x30
@@ -11,9 +11,9 @@ FILE_SIZE = 0x50
 CODEC_ZSTD = 1
 
 
-def zstd(args, data):
-    return subprocess.run(["zstd", "-q", *args], input=data, stdout=subprocess.PIPE,
-                          check=True).stdout
+def decompress(data, dictionary=None):
+    with zstandard.ZstdDecompressor(dict_data=dictionary).stream_reader(data) as reader:
+        return reader.read()
 
 
 class Nup:
@@ -66,7 +66,7 @@ class Nup:
         _, extent, extent_size, codec = self.files[path]
         self.file.seek(extent)
         data = self.file.read(extent_size)
-        return zstd(["-dc"], data) if codec == CODEC_ZSTD else data
+        return decompress(data) if codec == CODEC_ZSTD else data
 
 
 def sarc_file(data, wanted):
@@ -85,17 +85,13 @@ def sarc_file(data, wanted):
 
 class ZsCodec:
     def __init__(self, dictionary):
-        self.dictionary = tempfile.NamedTemporaryFile()
-        self.dictionary.write(dictionary)
-        self.dictionary.flush()
+        self.dictionary = zstandard.ZstdCompressionDict(dictionary)
 
     def decompress(self, data):
-        return zstd(["-dc", "-D", self.dictionary.name], data)
+        return decompress(data, self.dictionary)
 
-    def compress(self, data, output):
-        # The game needs the content size in the frame header, which zstd omits for piped input.
-        with tempfile.NamedTemporaryFile() as raw:
-            raw.write(data)
-            raw.flush()
-            subprocess.run(["zstd", "-19", "-qf", "--no-check", "-D", self.dictionary.name,
-                            raw.name, "-o", str(output)], check=True)
+    def compress(self, data):
+        # The game hangs on a frame that has no content size.
+        compressor = zstandard.ZstdCompressor(level=19, dict_data=self.dictionary,
+                                              write_content_size=True, write_checksum=False)
+        return compressor.compress(data)
