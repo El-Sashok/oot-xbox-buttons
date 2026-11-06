@@ -11,21 +11,45 @@ This repository contains no game files. The script builds the mod from your own 
 
 ## Requirements
 
-- Lichii with LayeredFS support for NUP titles ([PR #203](https://github.com/zortos293/Lichii/pull/203)). Without it, the mod is listed but ignored.
-- The game as a `.nup` file, in the supported version. The script stops if your version differs.
-- Python 3, the `zstd` command line tool and fontTools: `pip install -r requirements.txt`
+- **Lichii with LayeredFS support for NUP titles.** Official builds ignore RomFS mods on `.nup` files until [PR #203](https://github.com/zortos293/Lichii/pull/203) is merged. Until then, use a build that includes it, such as the [`oot-nx2` branch of this fork](https://github.com/El-Sashok/Lichii/tree/oot-nx2).
+- **The game as a `.nup` file**, in the supported version. The script stops with an error if your version differs.
+- **Python 3 and the `zstd` command line tool.**
 
-## Build
+Tested on Linux only.
 
-```
-python3 build_mod.py "/path/to/game.nup"
-```
+## Installation
 
-This writes `out/XboxButtons/` and `out/XboxButtons.zip`.
+1. Get the code and install the Python dependency:
 
-## Install
+   ```
+   git clone https://github.com/El-Sashok/oot-xbox-buttons.git
+   cd oot-xbox-buttons
+   python3 -m venv .venv
+   .venv/bin/pip install -r requirements.txt
+   ```
 
-In Lichii, open the game's properties, go to the Add-Ons tab and install `out/XboxButtons.zip`. You can also copy `out/XboxButtons/` to `load/0400486024DEC000/` in the emulator's data folder.
+2. Build the mod from your game:
+
+   ```
+   .venv/bin/python build_mod.py "/path/to/game.nup"
+   ```
+
+   This writes `out/XboxButtons/` and `out/XboxButtons.zip`.
+
+3. Close Lichii, then copy the mod folder to the game's mod directory:
+
+   ```
+   mkdir -p ~/.local/share/eden/load/0400486024DEC000
+   cp -r out/XboxButtons ~/.local/share/eden/load/0400486024DEC000/
+   ```
+
+   You can also right-click the game in Lichii and choose "Open Mod Data Location" to find this folder. Lichii's Add-Ons tab can import `out/XboxButtons.zip` too, but that route has not been tested yet.
+
+4. Start the game. The mod is enabled by default and can be turned off in the game's Add-Ons tab.
+
+To uninstall, delete the `XboxButtons` folder from the mod directory.
+
+If the game stays on a black screen, delete the mod folder and open an issue with your Lichii version.
 
 ## Limitations
 
